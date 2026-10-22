@@ -159,6 +159,7 @@ if (osis) {
             <>
                 <h1 class="mb-2 text-4xl text-center">
                     {userData.first_name ? `${userData.first_name} ${userData.last_name}` : osis}
+                    {userData.graduation_year && <span class="ml-2 whitespace-nowrap">'{userData.graduation_year}</span>}
                 </h1>
 
                 <div class="flex flex-col w-full items-center mb-5 space-y-5">
