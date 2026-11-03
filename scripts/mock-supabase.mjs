@@ -23,15 +23,85 @@ const allDates = process.env.MOCK_EMPTY ? [] : offsets.map(daysAgo)
 const pastDates = process.env.MOCK_EMPTY ? [] : offsets.filter((n) => n > 0).map(daysAgo)
 
 const people = [
-    { id_number: "100000001", first_name: "Avery", last_name: "Lindqvist", graduation_year: 2028, safety_test: true, dues: true, miss: [8, 21, 22, 37], noOut: [5, 30] },
-    { id_number: "100000002", first_name: "Rowan", last_name: "Okonkwo-Bellweather", graduation_year: 2027, safety_test: false, dues: true, miss: [1, 3, 7, 11, 12, 16, 24, 25, 26, 40, 41], noOut: [0, 5, 9, 30, 45] },
-    { id_number: "100000003", first_name: "Sam", last_name: "Takahashi", graduation_year: null, safety_test: true, dues: false, miss: [4, 19], noOut: [33] },
-    { id_number: "100000004", first_name: "", last_name: "", graduation_year: null, safety_test: false, dues: false, miss: [0, 1, 2, 3], noOut: [6] },
+    {
+        id_number: "100000001",
+        first_name: "Avery",
+        last_name: "Lindqvist",
+        graduation_year: 2028,
+        safety_test: true,
+        dues: true,
+        miss: [8, 21, 22, 37],
+        noOut: [5, 30],
+    },
+    {
+        id_number: "100000002",
+        first_name: "Rowan",
+        last_name: "Okonkwo-Bellweather",
+        graduation_year: 2027,
+        safety_test: false,
+        dues: true,
+        miss: [1, 3, 7, 11, 12, 16, 24, 25, 26, 40, 41],
+        noOut: [0, 5, 9, 30, 45],
+    },
+    {
+        id_number: "100000003",
+        first_name: "Sam",
+        last_name: "Takahashi",
+        graduation_year: null,
+        safety_test: true,
+        dues: false,
+        miss: [4, 19],
+        noOut: [33],
+    },
+    {
+        id_number: "100000004",
+        first_name: "",
+        last_name: "",
+        graduation_year: null,
+        safety_test: false,
+        dues: false,
+        miss: [0, 1, 2, 3],
+        noOut: [6],
+    },
 ]
 
 // fills out the roster so the team and meeting screens look like a real season
-const firsts = ["Jordan", "Priya", "Mateo", "Lena", "Kofi", "Hana", "Theo", "Noor", "Ezra", "Mina", "Dante", "Yuki", "Tariq", "Sofia", "Owen", "Amara"]
-const lasts = ["Varga", "Nakamura", "Osei", "Reyes", "Haddad", "Lund", "Baptiste", "Kowal", "Rahman", "Ferro", "Adeyemi", "Choi", "Marsh", "Petrov", "Sandoval", "Quill"]
+const firsts = [
+    "Jordan",
+    "Priya",
+    "Mateo",
+    "Lena",
+    "Kofi",
+    "Hana",
+    "Theo",
+    "Noor",
+    "Ezra",
+    "Mina",
+    "Dante",
+    "Yuki",
+    "Tariq",
+    "Sofia",
+    "Owen",
+    "Amara",
+]
+const lasts = [
+    "Varga",
+    "Nakamura",
+    "Osei",
+    "Reyes",
+    "Haddad",
+    "Lund",
+    "Baptiste",
+    "Kowal",
+    "Rahman",
+    "Ferro",
+    "Adeyemi",
+    "Choi",
+    "Marsh",
+    "Petrov",
+    "Sandoval",
+    "Quill",
+]
 for (let i = 0; i < 32; i++) {
     people.push({
         id_number: String(100000010 + i),
@@ -82,12 +152,18 @@ const meetings = pastDates.map((date) => {
         const row = attendanceRow(p)
         const out = row.checked_out.includes(date)
         if (!out && !row.only_checked_in.includes(date)) return []
-        return [{
-            id: p.id_number,
-            checkin_time: `${date} 15:${String(5 + (Number(p.id_number) % 40)).padStart(2, "0")}:00`,
-            checkout_time: out ? `${date} ${17 + (Number(p.id_number) % 2)}:${String(10 + (Number(p.id_number) % 45)).padStart(2, "0")}:00` : "",
-            total_hours: out ? (2 + (Number(p.id_number) % 2) + (Number(p.id_number) % 45) / 60).toFixed(2) : "0.00",
-        }]
+        return [
+            {
+                id: p.id_number,
+                checkin_time: `${date} 15:${String(5 + (Number(p.id_number) % 40)).padStart(2, "0")}:00`,
+                checkout_time: out
+                    ? `${date} ${17 + (Number(p.id_number) % 2)}:${String(10 + (Number(p.id_number) % 45)).padStart(2, "0")}:00`
+                    : "",
+                total_hours: out
+                    ? (2 + (Number(p.id_number) % 2) + (Number(p.id_number) % 45) / 60).toFixed(2)
+                    : "0.00",
+            },
+        ]
     })
     const outs = attendees.filter((a) => a.checkout_time).length
     return {
@@ -106,9 +182,24 @@ function base64url(value) {
 function session(osis) {
     const exp = Math.floor(Date.now() / 1000) + 86400
     const email = `${osis}@email.com`
-    const user = { id: osis, aud: "authenticated", role: "authenticated", email, app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" }
+    const user = {
+        id: osis,
+        aud: "authenticated",
+        role: "authenticated",
+        email,
+        app_metadata: {},
+        user_metadata: {},
+        created_at: "2026-01-01T00:00:00Z",
+    }
     const access_token = `${base64url({ alg: "none", typ: "JWT" })}.${base64url({ sub: osis, email, exp })}.mock`
-    return { access_token, refresh_token: `mock-${osis}`, token_type: "bearer", expires_in: 86400, expires_at: exp, user }
+    return {
+        access_token,
+        refresh_token: `mock-${osis}`,
+        token_type: "bearer",
+        expires_in: 86400,
+        expires_at: exp,
+        user,
+    }
 }
 
 function applyFilters(rows, params) {
@@ -118,14 +209,19 @@ function applyFilters(rows, params) {
         if (expression.startsWith("eq.")) result = result.filter((r) => String(r[column]) === expression.slice(3))
         if (expression.startsWith("neq.")) result = result.filter((r) => String(r[column]) !== expression.slice(4))
         if (expression.startsWith("in.(")) {
-            const values = expression.slice(4, -1).split(",").map((v) => v.replace(/"/g, ""))
+            const values = expression
+                .slice(4, -1)
+                .split(",")
+                .map((v) => v.replace(/"/g, ""))
             result = result.filter((r) => values.includes(String(r[column])))
         }
     }
     const order = params.get("order")
     if (order) {
         const [column, direction] = order.split(".")
-        result = [...result].sort((a, b) => String(a[column]).localeCompare(String(b[column])) * (direction === "desc" ? -1 : 1))
+        result = [...result].sort(
+            (a, b) => String(a[column]).localeCompare(String(b[column])) * (direction === "desc" ? -1 : 1),
+        )
     }
     return result
 }

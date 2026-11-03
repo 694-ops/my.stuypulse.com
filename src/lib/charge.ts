@@ -15,14 +15,20 @@ const MIN_LEVEL = 0.15
 
 // this season's meetings so far, with the calendar's rules: a past meeting with no scan is a miss,
 // and today isn't past yet
-export function memberCells(allMeetings: string[] | null, checkedOut: string[] | null, onlyCheckedIn: string[] | null, today: string): Cell[] {
+export function memberCells(
+    allMeetings: string[] | null,
+    checkedOut: string[] | null,
+    onlyCheckedIn: string[] | null,
+    today: string,
+): Cell[] {
     const start = seasonStart(today)
     const past = [...(allMeetings || [])].sort().filter((date) => date >= start && date < today)
 
     return past.map((date): Cell => {
         const name = formatMeetingDate(date)
 
-        if (onlyCheckedIn?.includes(date)) return { key: date, kind: "partial", level: 0.5, label: `${name}: No checkout` }
+        if (onlyCheckedIn?.includes(date))
+            return { key: date, kind: "partial", level: 0.5, label: `${name}: No checkout` }
         if (checkedOut?.includes(date)) return { key: date, kind: "present", level: 1, label: `${name}: Present` }
         return { key: date, kind: "absent", level: 0, label: `${name}: Missed` }
     })
@@ -74,7 +80,13 @@ export function meetingCells(attendees: Attendee[], names: Record<string, string
 
         if (!checkout_time) return { key: id, kind: "partial", level: 0.5, label: `${name}: No checkout`, href }
 
-        return { key: id, kind: "present", level: Math.max(MIN_LEVEL, toCount(total_hours) / longest), label: `${name}: ${total_hours} hours`, href }
+        return {
+            key: id,
+            kind: "present",
+            level: Math.max(MIN_LEVEL, toCount(total_hours) / longest),
+            label: `${name}: ${total_hours} hours`,
+            href,
+        }
     })
 }
 

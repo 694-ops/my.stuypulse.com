@@ -53,14 +53,13 @@ try {
 // the osis is stored as email in the supabase database
 let osis = session.data.user?.email?.split("@")[0]
 
-export interface Meeting { 
+export interface Meeting {
     date: string
-    attendees: { id: string, total_hours: string, checkin_time: string, checkout_time: string }[]
+    attendees: { id: string; total_hours: string; checkin_time: string; checkout_time: string }[]
     num_checkins: string
     num_checkouts: string
-    checkout_rate_percent: string 
+    checkout_rate_percent: string
 }
-
 
 let allMeetings: string[] = []
 let userData
@@ -88,8 +87,8 @@ const fromMeeting = from && /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : null
 let meetingInfo: Meeting | null = null
 let names: Record<string, string> = {}
 // first and last names kept apart, so the meeting page can sort by either
-let nameParts: Record<string, { first: string, last: string }> = {}
-let roster: { id: string, name: string }[] = []
+let nameParts: Record<string, { first: string; last: string }> = {}
+let roster: { id: string; name: string }[] = []
 
 if (osis) {
     if (!isAdmin(osis)) {
@@ -122,10 +121,8 @@ if (osis) {
         // admin's view is read by the server. this checks who logged in, not the url's osis
         const adminClient = viewerIsAdmin ? serviceSupabase : supabase
 
-        const { data, error } = await adminClient
-            .from("meetings")
-            .select("*")
-        
+        const { data, error } = await adminClient.from("meetings").select("*")
+
         if (error) console.error("error fetching meetings data")
         else meetings = data
 
@@ -137,29 +134,33 @@ if (osis) {
                 .neq("id_number", "all")
 
             if (error) console.error("error fetching the roster")
-            else roster = data
-                .map(({ id_number, first_name, last_name }) => ({ id: id_number, name: [first_name, last_name].filter(Boolean).join(" ") }))
-                .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id))
+            else
+                roster = data
+                    .map(({ id_number, first_name, last_name }) => ({
+                        id: id_number,
+                        name: [first_name, last_name].filter(Boolean).join(" "),
+                    }))
+                    .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id))
         }
 
         if (meeting) {
-            const { data, error } = await adminClient
-                .from("meetings")
-                .select("*")
-                .eq("date", meeting)
-                
+            const { data, error } = await adminClient.from("meetings").select("*").eq("date", meeting)
+
             if (error) console.error("error fetching meeting data")
             else {
                 meetingInfo = data[0] as Meeting
 
                 const { data: data1, error } = await adminClient
-                .from("attendance")
-                .select("id_number, first_name, last_name")
-                .in("id_number", meetingInfo.attendees.map(({id}) => id))
-                
+                    .from("attendance")
+                    .select("id_number, first_name, last_name")
+                    .in(
+                        "id_number",
+                        meetingInfo.attendees.map(({ id }) => id),
+                    )
+
                 if (error) console.error("error fetching user names")
                 else {
-                    data1.forEach(({ id_number, first_name, last_name}) => {
+                    data1.forEach(({ id_number, first_name, last_name }) => {
                         if (first_name && last_name) {
                             names[id_number] = first_name + " " + last_name
                             nameParts[id_number] = { first: first_name, last: last_name }
@@ -175,45 +176,73 @@ if (osis) {
 <Layout title="Dashboard | MyPulse" desc="Track attendance and see upcoming events for StuyPulse">
     {
         // admin dashboard or meeting page
-        isAdmin(osis) ? <>
-            <TopBar />
-            {
-                // meeting page
-                meeting && meetingInfo ?
-                    <main class="page-width pb-16">
-                        <nav class="mt-4" aria-label="Back"><BackLink href="/dashboard" label="All meetings" /></nav>
-                        <h1 class="headline mt-4">{formatMeetingDate(meeting)}</h1>
-                        <dl class="flex flex-wrap gap-x-10 gap-y-3 mt-6 mb-8 lg:mb-10">
-                            <div class="flex flex-col-reverse"><dt class="text-[15px] text-soft">checked in</dt><dd class="figure text-[32px]">{meetingInfo.num_checkins}</dd></div>
-                            <div class="flex flex-col-reverse"><dt class="text-[15px] text-soft">checked out</dt><dd class="figure text-[32px]">{meetingInfo.num_checkouts}</dd></div>
-                            <div class="flex flex-col-reverse"><dt class="text-[15px] text-soft">checkout rate</dt><dd class="figure text-[32px]">{formatPercent(meetingInfo.checkout_rate_percent)}</dd></div>
-                        </dl>
-                        {meetingInfo.attendees.length >= MIN_MEETING_BATTERY && <>
-                            <Battery cells={meetingCells(meetingInfo.attendees, names)} />
-                            <div class="mb-10"></div>
-                        </>}
-                        <StudentsList meetingInfo={meetingInfo} names={names} nameParts={nameParts} />
-                    </main> :
-
-                // if no meeting then just display the admin dashboard with student search and meetings list
-                <main class="page-width pb-16">
-                    <div class="grid lg:grid-cols-[minmax(0,1fr)_340px] items-end gap-x-16 gap-y-8 mt-12 lg:mt-20 mb-8 lg:mb-10">
-                        <div>
-                            <p class="text-soft mb-3">Team 694</p>
-                            <h1 class="headline">Meetings</h1>
-                        </div>
-                        <MemberSearch members={roster} />
-                    </div>
-                    <Battery cells={teamCells(meetings, todayAtShop())} emptyText="No meetings yet." />
-                    <div class="mb-10"></div>
-                    <MeetingsList meetings={meetings.sort(((a, b) => { return b.date.localeCompare(a.date) }))}/>
-                </main>
-            }
-        </>
-        : 
-
-        // user dashboard
-        <MemberDashboard userData={userData} allMeetings={allMeetings} osis={osis} viewerIsAdmin={viewerIsAdmin} days={days} fromMeeting={fromMeeting} />
+        isAdmin(osis) ? (
+            <>
+                <TopBar />
+                {
+                    // meeting page
+                    meeting && meetingInfo ? (
+                        <main class="page-width pb-16">
+                            <nav class="mt-4" aria-label="Back">
+                                <BackLink href="/dashboard" label="All meetings" />
+                            </nav>
+                            <h1 class="headline mt-4">{formatMeetingDate(meeting)}</h1>
+                            <dl class="flex flex-wrap gap-x-10 gap-y-3 mt-6 mb-8 lg:mb-10">
+                                <div class="flex flex-col-reverse">
+                                    <dt class="text-[15px] text-soft">checked in</dt>
+                                    <dd class="figure text-[32px]">{meetingInfo.num_checkins}</dd>
+                                </div>
+                                <div class="flex flex-col-reverse">
+                                    <dt class="text-[15px] text-soft">checked out</dt>
+                                    <dd class="figure text-[32px]">{meetingInfo.num_checkouts}</dd>
+                                </div>
+                                <div class="flex flex-col-reverse">
+                                    <dt class="text-[15px] text-soft">checkout rate</dt>
+                                    <dd class="figure text-[32px]">
+                                        {formatPercent(meetingInfo.checkout_rate_percent)}
+                                    </dd>
+                                </div>
+                            </dl>
+                            {meetingInfo.attendees.length >= MIN_MEETING_BATTERY && (
+                                <>
+                                    <Battery cells={meetingCells(meetingInfo.attendees, names)} />
+                                    <div class="mb-10" />
+                                </>
+                            )}
+                            <StudentsList meetingInfo={meetingInfo} names={names} nameParts={nameParts} />
+                        </main>
+                    ) : (
+                        // if no meeting then just display the admin dashboard with student search and meetings list
+                        <main class="page-width pb-16">
+                            <div class="grid lg:grid-cols-[minmax(0,1fr)_340px] items-end gap-x-16 gap-y-8 mt-12 lg:mt-20 mb-8 lg:mb-10">
+                                <div>
+                                    <p class="text-soft mb-3">Team 694</p>
+                                    <h1 class="headline">Meetings</h1>
+                                </div>
+                                <MemberSearch members={roster} />
+                            </div>
+                            <Battery cells={teamCells(meetings, todayAtShop())} emptyText="No meetings yet." />
+                            <div class="mb-10" />
+                            <MeetingsList
+                                meetings={meetings.sort((a, b) => {
+                                    return b.date.localeCompare(a.date)
+                                })}
+                            />
+                        </main>
+                    )
+                }
+            </>
+        ) : (
+            // user dashboard
+            <MemberDashboard
+                userData={userData}
+                allMeetings={allMeetings}
+                osis={osis}
+                viewerIsAdmin={viewerIsAdmin}
+                days={days}
+                fromMeeting={fromMeeting}
+            />
+        )
     }
 
     <script>
@@ -229,7 +258,6 @@ if (osis) {
                 body: data,
             })
 
-            
             const text = await response.text()
             if (response.ok) window.location.href = text
             else {

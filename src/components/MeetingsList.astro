@@ -21,24 +21,41 @@ const busiest = Math.max(1, ...meetings.map(({ num_checkins }) => Number(num_che
                     <span>Date</span>
                     <span class="text-right">In</span>
                     <span class="out-column text-right">Out</span>
-                    <span class="text-right"><span class="md:hidden">Rate</span><span class="hidden md:inline">Checkout rate</span></span>
+                    <span class="text-right">
+                        <>
+                            <span class="md:hidden">Rate</span>
+                            <span class="hidden md:inline">Checkout rate</span>
+                        </>
+                    </span>
                 </div>
                 <ul>
-                    {
-                        meetings.map(({ date, num_checkins, num_checkouts, checkout_rate_percent }) => (
-                            <li>
-                                <a class="meeting-row data-row items-center tabular-nums" href={`${Astro.url.origin}/dashboard?meeting=${date}`}>
-                                    <span class="font-medium">{formatMeetingDate(date)}</span>
-                                    <span class="flex items-center gap-3">
-                                        <span class="turnout-track" aria-hidden="true"><span style={`width: ${((Number(num_checkins) || 0) / busiest) * 100}%`}></span></span>
-                                        <span class="w-8 text-right"><span class="sr-only">checked in </span>{num_checkins}</span>
+                    {meetings.map(({ date, num_checkins, num_checkouts, checkout_rate_percent }) => (
+                        <li>
+                            <a
+                                class="meeting-row data-row items-center tabular-nums"
+                                href={`${Astro.url.origin}/dashboard?meeting=${date}`}
+                            >
+                                <span class="font-medium">{formatMeetingDate(date)}</span>
+                                <span class="flex items-center gap-3">
+                                    <span class="turnout-track" aria-hidden="true">
+                                        <span style={`width: ${((Number(num_checkins) || 0) / busiest) * 100}%`} />
                                     </span>
-                                    <span class="out-column text-right"><span class="sr-only">checked out </span>{num_checkouts}</span>
-                                    <span class="text-right text-soft"><span class="sr-only">checkout rate </span>{formatPercent(checkout_rate_percent)}</span>
-                                </a>
-                            </li>
-                        ))
-                    }
+                                    <span class="w-8 text-right">
+                                        <span class="sr-only">checked in </span>
+                                        {num_checkins}
+                                    </span>
+                                </span>
+                                <span class="out-column text-right">
+                                    <span class="sr-only">checked out </span>
+                                    {num_checkouts}
+                                </span>
+                                <span class="text-right text-soft">
+                                    <span class="sr-only">checkout rate </span>
+                                    {formatPercent(checkout_rate_percent)}
+                                </span>
+                            </a>
+                        </li>
+                    ))}
                 </ul>
             </>
         ) : (

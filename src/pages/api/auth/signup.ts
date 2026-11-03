@@ -14,11 +14,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     if (password.length < 6) return new Response("Password too short", { status: 400 })
 
     // checks if the osis exists in the database
-    const { data, error } = await supabase
-        .from("attendance")
-        .select("id_number")
-        .eq("id_number", osis)
-    
+    const { data, error } = await supabase.from("attendance").select("id_number").eq("id_number", osis)
+
     if (error) return new Response("Error fetching database", { status: 500 })
     if (data.length == 0) return new Response("OSIS not in database", { status: 500 })
 
@@ -27,9 +24,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     if (signUpError) return new Response(signUpError.message, { status: 500 })
 
     // log in with supabase and handle any errors
-    const { data: loginData, error: logInError } = await supabase.auth.signInWithPassword({ email: osis + "@email.com", password })
+    const { data: loginData, error: logInError } = await supabase.auth.signInWithPassword({
+        email: osis + "@email.com",
+        password,
+    })
     if (logInError) return new Response(logInError.message, { status: 500 })
-    
+
     // save the account session using cookies
     const { access_token, refresh_token } = loginData.session
     cookies.set("sb-access-token", access_token, {

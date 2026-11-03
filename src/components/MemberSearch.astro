@@ -1,7 +1,7 @@
 ---
 interface Props {
     // everyone on the roster, so names can be suggested while typing
-    members: { id: string, name: string }[]
+    members: { id: string; name: string }[]
 }
 
 const { members } = Astro.props
@@ -11,7 +11,15 @@ const { members } = Astro.props
     <label for="name" class="text-[15px] font-medium">Find a member by name or OSIS</label>
     <div class="relative flex gap-2">
         <div class="relative flex-1 min-w-0">
-            <input class="field" name="name" id="name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="member-options"/>
+            <input
+                class="field"
+                name="name"
+                id="name"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="false"
+                aria-controls="member-options"
+            />
             <ul id="member-options" role="listbox" aria-label="Matching members" class="member-options" hidden></ul>
         </div>
         <button class="button w-auto!" type="submit">Search</button>
@@ -32,10 +40,16 @@ const { members } = Astro.props
         const typed = query.trim().toLowerCase()
         if (!typed) return []
 
-        return members.filter(({ id, name }) => {
-            const lower = name.toLowerCase()
-            return id.startsWith(typed) || lower.startsWith(typed) || lower.split(" ").some((word) => word.startsWith(typed))
-        }).slice(0, MAX_OPTIONS)
+        return members
+            .filter(({ id, name }) => {
+                const lower = name.toLowerCase()
+                return (
+                    id.startsWith(typed) ||
+                    lower.startsWith(typed) ||
+                    lower.split(" ").some((word) => word.startsWith(typed))
+                )
+            })
+            .slice(0, MAX_OPTIONS)
     }
 
     function open(member) {

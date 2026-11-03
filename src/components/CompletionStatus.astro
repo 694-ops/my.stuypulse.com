@@ -1,6 +1,6 @@
 ---
 interface Props {
-	safety_test: boolean
+    safety_test: boolean
     dues: boolean
 }
 
@@ -18,21 +18,48 @@ const items = [
             <li class:list={["status-pill", done ? "status-pill-done" : "status-pill-open"]}>
                 {icon === "safety" ? (
                     // a hard hat
-                    <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4.5 15.5a7.5 7.5 0 0 1 15 0"/>
-                        <rect x="2.5" y="15.5" width="19" height="3" rx="1"/>
-                        <path d="M10 8.3V12M14 8.3V12"/>
+                    <svg
+                        viewBox="0 0 24 24"
+                        class="size-5"
+                        aria-hidden="true"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.9"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M4.5 15.5a7.5 7.5 0 0 1 15 0" />
+                        <rect x="2.5" y="15.5" width="19" height="3" rx="1" />
+                        <path d="M10 8.3V12M14 8.3V12" />
                     </svg>
                 ) : (
                     // a coin
-                    <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="9"/>
-                        <path d="M14.8 9.2c-.4-.9-1.5-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2s1.2 1.7 2.8 2.1 2.8.9 2.8 2.1-1.2 2-2.8 2c-1.3 0-2.4-.5-2.8-1.4M12 6.3v1.5M12 16.2v1.5"/>
+                    <svg
+                        viewBox="0 0 24 24"
+                        class="size-5"
+                        aria-hidden="true"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.9"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M14.8 9.2c-.4-.9-1.5-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2s1.2 1.7 2.8 2.1 2.8.9 2.8 2.1-1.2 2-2.8 2c-1.3 0-2.4-.5-2.8-1.4M12 6.3v1.5M12 16.2v1.5" />
                     </svg>
                 )}
                 <span>{label}</span>
                 {done ? (
-                    <svg viewBox="0 0 16 16" class="size-4" role="img" aria-label="done"><path d="M3 8.5l3.2 3.2L13 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <svg viewBox="0 0 16 16" class="size-4" role="img" aria-label="done">
+                        <path
+                            d="M3 8.5l3.2 3.2L13 4.5"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
                 ) : (
                     <span class="status-pill-note">Not done</span>
                 )}

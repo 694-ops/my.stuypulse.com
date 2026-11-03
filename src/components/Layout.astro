@@ -1,6 +1,6 @@
 ---
 interface Props {
-	title: string
+    title: string
     desc: string
 }
 
@@ -12,14 +12,14 @@ import "../styles/global.css"
 
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="description" content={desc} />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/694-logo.svg" />
-		<title>{title}</title>
-	</head>
-	<body class="min-h-dvh">
-		<slot />
-	</body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="description" content={desc} />
+        <meta name="viewport" content="width=device-width" />
+        <link rel="icon" type="image/svg+xml" href="/694-logo.svg" />
+        <title>{title}</title>
+    </head>
+    <body class="min-h-dvh">
+        <slot />
+    </body>
 </html>

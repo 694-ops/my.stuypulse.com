@@ -7,7 +7,7 @@ export interface DayStats {
 
 interface MeetingRow {
     date: string
-    attendees: { id: string, total_hours: string, checkin_time: string, checkout_time: string }[] | null
+    attendees: { id: string; total_hours: string; checkin_time: string; checkout_time: string }[] | null
 }
 
 // turns the kiosk's "2026-10-12 15:32:00" into "3:32 PM", or "" if there's no time to read

@@ -1,4 +1,5 @@
 # MyPulse
+
 A website for StuyPulse members to track their attendance.
 
 For documentation, visit [this link](https://docs.google.com/document/d/1YYvSsouOimYmmZP7nLjP3gyBHZ6w8mmlSXS-C2qMfFo/edit?usp=sharing).
@@ -20,6 +21,12 @@ alter table public.attendance
 ```
 
 Run the scanner import regression tests with `node --test tests/kiosk-import.test.mjs`.
+
+## Commands
+
+- `npm run dev` starts the site locally.
+- `npm test` runs every test in `tests/`.
+- `npm run format` tidies the code with Prettier. `npm run format:check` only reports what would change.
 
 ## Previewing without the real database
 
