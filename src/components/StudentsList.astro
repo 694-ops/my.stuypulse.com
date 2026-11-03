@@ -5,35 +5,154 @@ interface Props {
         attendees: { id: string, total_hours: string, checkin_time: string, checkout_time: string }[]
         num_checkins: string
         num_checkouts: string
-        checkout_rate_percent: string 
+        checkout_rate_percent: string
     }
     names: Record<string, string>
+    nameParts: Record<string, { first: string, last: string }>
 }
 
-const { meetingInfo, names } = Astro.props
+import { formatClock } from "../lib/days"
+
+const { meetingInfo, names, nameParts } = Astro.props
+
+// minutes since midnight, or null if the kiosk's time can't be read
+function toMinutes(time: string) {
+    const clock = time.substring(11, 16)
+    const minutes = Number(clock.substring(0, 2)) * 60 + Number(clock.substring(3, 5))
+    return clock.length === 5 && !isNaN(minutes) ? minutes : null
+}
+
+// the list starts in check-in order, which is also the sort menu's first choice
+const byCheckin = [...meetingInfo.attendees].sort((a, b) => (toMinutes(a.checkin_time) ?? 99999) - (toMinutes(b.checkin_time) ?? 99999))
+
+// every bar shares one time axis, from the first scan to the last
+const times = meetingInfo.attendees
+    .flatMap(({ checkin_time, checkout_time }) => [toMinutes(checkin_time), toMinutes(checkout_time)])
+    .filter((minutes) => minutes !== null)
+const first = Math.min(...times)
+const last = Math.max(...times)
+const position = (minutes: number) => (last > first ? ((minutes - first) / (last - first)) * 100 : 0)
+const clock = (minutes: number) => formatClock(`0000-00-00 ${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`)
 ---
 
-<div class="w-[350px] h-[500px] overflow-auto rounded-xl border-2 my-2">
-    <div class="flex px-4 my-2">
-        <h1 class="text-sm w-[120px] text-center">Name</h1>
-        <h1 class="text-sm w-[60px] text-center">Hours</h1>
-        <h1 class="text-sm w-[60px] text-center">In</h1>
-        <h1 class="text-sm w-[60px] text-center">Out</h1>
+<section>
+    <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 mb-3">
+        <h2 class="section-title">Who came</h2>
+        {meetingInfo.attendees.length > 1 && (
+            <label class="flex items-center gap-2 text-[15px] text-soft">
+                Sort by
+                <select id="sort-attendees" class="sort-select">
+                    <option value="checkin">Check-in time</option>
+                    <option value="first">First name</option>
+                    <option value="last">Last name</option>
+                    <option value="longest">Longest stay</option>
+                    <option value="shortest">Shortest stay</option>
+                </select>
+            </label>
+        )}
     </div>
-    <hr class="w-full"/>
-    {   
-        meetingInfo.attendees.map(({ id, total_hours, checkin_time, checkout_time }) => {
-            return (
-                <a href={`${Astro.url.origin}/dashboard?osis=${id}`}>
-                    <div class="flex px-4 my-2 text-[#424242] items-center hover:underline">
-                        <h1 class="text-sm w-[120px] text-center">{names[id] || id}</h1>
-                        <h1 class="text-sm w-[60px] text-center">{total_hours === "0.00" ? "-" : total_hours}</h1>
-                        <h1 class="text-sm w-[60px] text-center">{checkin_time.substring(11, 16)}</h1>
-                        <h1 class="text-sm w-[60px] text-center">{checkout_time.substring(11, 16) || "-"}</h1>
-                    </div>
-                </a>
-                <hr class="w-full"/>
-            )
-        })
+    {
+        meetingInfo.attendees.length ? (
+            <>
+                {
+                    times.length > 0 && (
+                        <div class="student-row hidden lg:grid gap-x-6 pb-2 text-sm text-soft">
+                            <span></span>
+                            <span class="flex justify-between tabular-nums"><span>{clock(first)}</span><span>{clock(last)}</span></span>
+                            <span></span>
+                        </div>
+                    )
+                }
+                <ul id="attendees">
+                    {
+                        byCheckin.map(({ id, total_hours, checkin_time, checkout_time }, index) => {
+                            const start = toMinutes(checkin_time)
+                            const end = toMinutes(checkout_time)
+                            const stayed = end !== null ? Number(total_hours) || 0 : -1
+
+                            return (
+                                <li data-index={index} data-checkin={start ?? 99999} data-first={nameParts[id]?.first.toLowerCase() ?? ""} data-last={nameParts[id]?.last.toLowerCase() ?? ""} data-id={id} data-hours={stayed}>
+                                    <a class="student-row data-row items-center" href={`${Astro.url.origin}/dashboard?osis=${id}&from=${meetingInfo.date}`}>
+                                        <span class="font-medium">{names[id] || id}</span>
+                                        <span class="bar-track">
+                                            {start !== null && end !== null && <span class="bar-fill" style={`left: ${position(start)}%; width: ${position(end) - position(start)}%`}></span>}
+                                            {start !== null && end === null && <span class="bar-dot" style={`left: min(${position(start)}%, calc(100% - 10px))`}></span>}
+                                        </span>
+                                        <span class="text-[15px] text-soft tabular-nums lg:text-right">
+                                            {formatClock(checkout_time) ? `${formatClock(checkin_time)} to ${formatClock(checkout_time)}` : `${formatClock(checkin_time) || "-"}, no checkout`}
+                                            {formatClock(checkout_time) && <span class="ml-2">{total_hours} h</span>}
+                                        </span>
+                                    </a>
+                                </li>
+                            )
+                        })
+                    }
+                </ul>
+            </>
+        ) : (
+            <p class="text-soft">{Number(meetingInfo.num_checkins) > 0 ? "Only this meeting's totals were saved, not who came or when." : "Nobody scanned in at this meeting."}</p>
+        )
     }
-</div>
+</section>
+
+<style>
+    /* narrow screens put the name and times on one line; the timeline bar only fits on wide ones */
+    .student-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding-inline: 0.5rem;
+    }
+
+    .student-row .bar-track {
+        display: none;
+    }
+
+    @media (min-width: 1024px) {
+        .student-row {
+            grid-template-columns: 220px minmax(0, 1fr) 220px;
+            padding-inline: 0.75rem;
+        }
+
+        .student-row .bar-track {
+            display: block;
+        }
+    }
+</style>
+
+<script>
+    // reorders the list in place; people who never checked out go last for either stay order
+    const select = document.getElementById("sort-attendees") as HTMLSelectElement | null
+    const list = document.getElementById("attendees")
+
+    select?.addEventListener("change", () => {
+        if (!list) return
+
+        const rows = [...list.children] as HTMLElement[]
+        const number = (row: HTMLElement, key: string) => Number(row.dataset[key])
+        const byStay = (direction: number) => (a: HTMLElement, b: HTMLElement) => {
+            const aHours = number(a, "hours")
+            const bHours = number(b, "hours")
+            if (aHours < 0 || bHours < 0) return bHours - aHours
+            return (aHours - bHours) * direction
+        }
+
+        // people with no name on file go after everyone who has one, in osis order
+        const byName = (first: string, second: string) => (a: HTMLElement, b: HTMLElement) => {
+            const aNamed = a.dataset[first] ? 0 : 1
+            const bNamed = b.dataset[first] ? 0 : 1
+            return aNamed - bNamed
+                || a.dataset[first]!.localeCompare(b.dataset[first]!)
+                || a.dataset[second]!.localeCompare(b.dataset[second]!)
+                || a.dataset.id!.localeCompare(b.dataset.id!)
+        }
+
+        const orders: Record<string, (a: HTMLElement, b: HTMLElement) => number> = {
+            checkin: (a, b) => number(a, "checkin") - number(b, "checkin") || number(a, "index") - number(b, "index"),
+            first: byName("first", "last"),
+            last: byName("last", "first"),
+            longest: byStay(-1),
+            shortest: byStay(1),
+        }
+
+        rows.sort(orders[select.value]).forEach((row) => list.appendChild(row))
+    })
+</script>

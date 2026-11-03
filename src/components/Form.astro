@@ -6,34 +6,40 @@ interface Props {
 const { type } = Astro.props
 ---
 
-<form id="form" class="flex flex-col gap-2 w-[200px]">
-    <input
-        class="text-center border-2 p-2 rounded-xl"
-        placeholder="enter osis:"
-        name="osis"
-        id="osis"
-    />
+<form id="form" class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+        <label for="osis" class="text-[15px] font-medium">OSIS</label>
+        <input
+            class="field"
+            name="osis"
+            id="osis"
+            autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+        />
+    </div>
 
-    <input
-        class="text-center border-2 p-2 rounded-xl"
-        placeholder="enter password:"
-        type="password"
-        name="password"
-        id="password"
-    />
+    <div class="flex flex-col gap-1">
+        <label for="password" class="text-[15px] font-medium">Password</label>
+        <input
+            class="field"
+            type="password"
+            name="password"
+            id="password"
+            autocomplete={ type === "login" ? "current-password" : "new-password" }
+        />
+    </div>
 
-    <button class="text-center border-2 p-2 rounded-xl" type="submit">
+    <p id="error" role="alert" class="text-[15px] text-charge empty:hidden"></p>
+
+    <button class="button" type="submit">
         { type === "login" ? "Log in" : "Sign up"}
     </button>
 </form>
-<h1 id="error" class="text-sm text-[#eb3446]"></h1>
 
-
-<div class="flex flex-col gap-2 w-[200px]">
-    <h1 class="text-sm text-center">
-        { type === "login" ? "Don't have an account?" : "Already have an account?"}
-    </h1>
-    <a href={ type === "login" ? "/signup" : "/"} class="text-center border-2 p-2 rounded-xl w-[200px]">
+<p class="mt-5 text-[15px] text-soft">
+    { type === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
+    <a href={ type === "login" ? "/signup" : "/"} class="link">
         { type === "login" ? "Sign up" : "Log in"}
     </a>
-</div>
+</p>

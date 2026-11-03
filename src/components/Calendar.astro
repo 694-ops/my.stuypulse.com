@@ -1,27 +1,40 @@
 ---
+import type { DayStats } from "../lib/days"
+
 interface Props {
     checkedOut: string[]
     onlyCheckedIn: string[]
     allMeetings: string[]
+    // the member's times at each meeting, keyed by date
+    days: Record<string, DayStats>
 }
 
-const { checkedOut, onlyCheckedIn, allMeetings } = Astro.props
+const { checkedOut, onlyCheckedIn, allMeetings, days } = Astro.props
 ---
 
-<div class="w-[275px] aspect-square flex flex-col justify-center border-2 p-5 rounded-xl">
-    <div class="flex space-x-3 justify-center mb-3">
-        <button id="left"><img src="/chevron-left.svg" alt="left" class="w-6"/></button>
-
-        <h1 id="title" class="text-center"></h1>
-
-        <button id="right"><img src="/chevron-left.svg" alt="right" class="w-6 rotate-180"/></button>
+<section aria-label="Attendance calendar">
+    <div class="flex items-center justify-between mb-3">
+        <h2 id="title" class="section-title"></h2>
+        <div class="flex">
+            <button id="left" class="grid place-items-center size-11 cursor-pointer" aria-label="Previous month"><img src="/chevron-left.svg" alt="" class="w-6"/></button>
+            <button id="right" class="grid place-items-center size-11 cursor-pointer" aria-label="Next month"><img src="/chevron-left.svg" alt="" class="w-6 rotate-180"/></button>
+        </div>
     </div>
 
+    <div class="grid grid-cols-7 mb-1 text-center text-[13px] text-soft" aria-hidden="true">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+    <div id="dates" class="grid grid-cols-7 gap-1 text-center text-sm tabular-nums"></div>
 
-    <div id="dates" class="grid grid-cols-7 text-center"></div>
-</div>
+    <ul class="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-[14px] text-soft" aria-hidden="true">
+        <li class="flex items-center gap-1.5"><span class="day-swatch bg-present"></span>Present</li>
+        <li class="flex items-center gap-1.5"><span class="day-swatch bg-partial"></span>No checkout</li>
+        <li class="flex items-center gap-1.5"><span class="day-swatch bg-absent"></span>Missed</li>
+    </ul>
 
-<script define:vars={{checkedOut, onlyCheckedIn, allMeetings}}>
+</section>
+
+<script define:vars={{checkedOut, onlyCheckedIn, allMeetings, days}}>
     let date = new Date()
     let year = date.getFullYear()
     let month = date.getMonth()
@@ -29,9 +42,13 @@ const { checkedOut, onlyCheckedIn, allMeetings } = Astro.props
     // saves today's date
     const today = new Date(year, month, date.getDate()).getTime()
 
+    // the meeting whose details are showing, starting with the latest one that's already happened
+    let selected = allMeetings.filter((meeting) => new Date(meeting + "T00:00:00").getTime() < today).sort().pop()
+
     updateTitle()
     generateDates()
     setButtonClicks()
+    showDay()
 
     // sets event listeners for changing months
     function setButtonClicks() {
@@ -64,9 +81,55 @@ const { checkedOut, onlyCheckedIn, allMeetings } = Astro.props
         title.innerText = date.toLocaleString('default', { month: 'long' }) + " " + year
     }
     
+    // what happened at a past meeting, as a style and a name
+    function dayStatus(dateString) {
+        if (onlyCheckedIn.includes(dateString)) return ["day-partial", "No checkout"]
+        if (checkedOut.includes(dateString)) return ["day-present", "Present"]
+        return ["day-absent", "Missed"]
+    }
+
+    // fills in the details under the calendar for the selected meeting
+    function showDay() {
+        const detail = document.getElementById("day-detail")
+        if (!selected) return
+
+        const [style, status] = dayStatus(selected)
+        const stats = days[selected]
+        const [y, m, d] = selected.split("-").map(Number)
+
+        document.getElementById("day-date").innerText = new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
+
+        const chip = document.getElementById("day-status")
+        chip.className = "day-chip " + style
+        chip.innerText = status
+
+        // a missed meeting has no times to show, and meetings from before the kiosk saved times have none either
+        const missed = style == "day-absent"
+        const noTimes = !missed && !stats?.checkin
+        document.getElementById("day-times").classList.toggle("hidden", missed || noTimes)
+        document.getElementById("day-missed").classList.toggle("hidden", !missed)
+        document.getElementById("day-no-times").classList.toggle("hidden", !noTimes)
+        document.getElementById("day-in").innerText = stats?.checkin || "-"
+        document.getElementById("day-out").innerText = stats?.checkout || "-"
+        document.getElementById("day-hours").innerText = stats?.hours || "-"
+
+        detail.classList.remove("hidden")
+    }
+
+    // styles a meeting day and names its status for hover and screen readers
+    function markDay(dayElement, style, status) {
+        dayElement.className += " " + style
+        dayElement.title = status
+
+        const label = document.createElement("span")
+        label.className = "sr-only"
+        label.innerText = status
+        dayElement.appendChild(label)
+    }
+
     // generates all the dates for the calendar
     function generateDates() {
-        const dayStyle = "aspect-square h-[30px] leading-[30px] my-1"
+        const dayStyle = "day"
 
         const dates = document.getElementById("dates")
         dates.innerHTML = ""
@@ -81,7 +144,7 @@ const { checkedOut, onlyCheckedIn, allMeetings } = Astro.props
         for (let i = firstDay - 1; i >= 0; i--) {
             const dayElement = document.createElement("div")
             dayElement.innerText = (lastMonthLastDate - i).toString()
-            dayElement.className = dayStyle + " text-[#9e9e9e]"
+            dayElement.className = dayStyle + " day-outside"
             dates?.appendChild(dayElement)
         }
 
@@ -90,39 +153,33 @@ const { checkedOut, onlyCheckedIn, allMeetings } = Astro.props
 
         // adds the days of the current month
         for (let i = 1; i <= lastDate; i++) {
-            const dayElement = document.createElement("div")
-            dayElement.innerText = i.toString()
-            dayElement.className = dayStyle
-
             // checks if the day is a meeting
             const dateString = `${year}-${(month + 1).toString().padStart(2, "0")}-${i.toString().padStart(2, "0")}`
             const curDate = new Date(year, month, i).getTime()
+            const pastMeeting = allMeetings.includes(dateString) && curDate < today
+
+            // past meetings can be selected to see that day's details
+            const dayElement = document.createElement(pastMeeting ? "button" : "div")
+            dayElement.innerText = i.toString()
+            dayElement.className = dayStyle
+
+            if (pastMeeting) {
+                dayElement.type = "button"
+                dayElement.className += " day-button"
+                dayElement.setAttribute("aria-pressed", String(dateString == selected))
+                dayElement.addEventListener("click", () => {
+                    selected = dateString
+                    document.querySelectorAll("#dates .day-button").forEach((button) => button.setAttribute("aria-pressed", String(button == dayElement)))
+                    showDay()
+                })
+            }
 
             // sees if it has reached today's date
             if (curDate == today)
-                dayElement.className += " font-bold border-2 border-black rounded !leading-[26px]"
+                dayElement.className += " day-today"
             
-            if (allMeetings.includes(dateString)) {
-                dayElement.className += " rounded"
-
-                // checks if the meeting is in the future or in the past
-
-                // meeting is in the past
-                if (curDate < today) {
-                    // checks if the person went to the meeting or not and colors appropriately
-
-                    // went to meeting but didn't check out
-                    if (onlyCheckedIn.includes(dateString))
-                        dayElement.className += " bg-[#ffbb73]"
-                    // went to meeting and checked out
-                    else if (checkedOut.includes(dateString))
-                        dayElement.className += " bg-[#77dd77]"
-                    else
-                        dayElement.className += " bg-[#e36873]"
-                }
-                // meeting is in the future
-                else dayElement.className += " bg-[#dbdbdb]"
-            }
+            // only past meetings are marked, colored by whether the person came and checked out
+            if (pastMeeting) markDay(dayElement, ...dayStatus(dateString))
 
             dates?.appendChild(dayElement)
         }
@@ -134,7 +191,7 @@ const { checkedOut, onlyCheckedIn, allMeetings } = Astro.props
         for (let i = lastDay + 1; i < 7; i++) {
             const dayElement = document.createElement("div")
             dayElement.innerText = (i - lastDay).toString()
-            dayElement.className = dayStyle + " text-[#9e9e9e]"
+            dayElement.className = dayStyle + " day-outside"
             dates?.appendChild(dayElement)
         }
     }   

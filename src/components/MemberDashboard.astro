@@ -1,0 +1,63 @@
+---
+import BackLink from "./BackLink.astro"
+import Battery from "./Battery.astro"
+import Calendar from "./Calendar.astro"
+import CompletionStatus from "./CompletionStatus.astro"
+import DayDetail from "./DayDetail.astro"
+import TopBar from "./TopBar.astro"
+import UserData from "./UserData.astro"
+import { memberCells } from "../lib/charge"
+import type { DayStats } from "../lib/days"
+import { formatMeetingDate, todayAtShop } from "../lib/format"
+
+interface Props {
+    // the attendance row, with every column the page reads
+    userData: any
+    allMeetings: string[]
+    osis: string | undefined
+    viewerIsAdmin: boolean
+    days: Record<string, DayStats>
+    // the meeting an admin came from, so they can go straight back to it
+    fromMeeting: string | null
+}
+
+const { userData, allMeetings, osis, viewerIsAdmin, days, fromMeeting } = Astro.props
+
+const name = userData.first_name ? `${userData.first_name} ${userData.last_name}` : osis
+const rate = parseFloat(userData.attendance_rate_percent)
+const cells = memberCells(allMeetings, userData.checked_out, userData.only_checked_in, todayAtShop())
+---
+
+<TopBar />
+<main class="page-width pb-6">
+    {viewerIsAdmin && (
+        <nav class="flex flex-wrap gap-x-6 mt-4" aria-label="Back">
+            {fromMeeting && <BackLink href={`/dashboard?meeting=${fromMeeting}`} label={`Back to ${formatMeetingDate(fromMeeting)}`} />}
+            <BackLink href="/dashboard" label="All meetings" />
+        </nav>
+    )}
+    <div class:list={["flex flex-wrap items-end justify-between gap-x-8 gap-y-4 mb-6", viewerIsAdmin ? "mt-2" : "mt-6 lg:mt-8"]}>
+        <div class="min-w-0 max-w-full">
+            <h1 class="headline wrap-anywhere">{name}</h1>
+            {userData.graduation_year && <p class="text-soft mt-1">Class of {userData.graduation_year}</p>}
+        </div>
+        <p class="percent" aria-label={`Attendance ${isNaN(rate) ? "not available" : `${Math.round(rate)} percent`}`}>
+            {isNaN(rate) ? "-" : <>{Math.round(rate)}<small>%</small></>}
+        </p>
+    </div>
+
+    <Battery cells={cells} emptyText="No meetings yet. Your first cell fills at your first scan." />
+
+    <ul class="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-[15px] text-soft" aria-hidden="true">
+        <li class="flex items-center gap-2"><span class="legend-mark cell-present" style="--level: 1; --delay: 0ms"><span class="absolute inset-0 bg-charge"></span></span>Present</li>
+        <li class="flex items-center gap-2"><span class="legend-mark cell-partial"><span class="absolute inset-x-0 bottom-0 h-1/2 bg-charge"></span></span>No checkout</li>
+        <li class="flex items-center gap-2"><span class="legend-mark cell-absent"></span>Missed</li>
+    </ul>
+
+    <div class="member-grid mt-8">
+        <div class="[grid-area:status]"><CompletionStatus safety_test={userData.safety_test} dues={userData.dues} /></div>
+        <div class="[grid-area:stats] min-w-0"><UserData userData={userData} /></div>
+        <div class="[grid-area:day] min-w-0"><DayDetail /></div>
+        <div class="[grid-area:cal]"><Calendar checkedOut={userData.checked_out} onlyCheckedIn={userData.only_checked_in} allMeetings={allMeetings} days={days} /></div>
+    </div>
+</main>

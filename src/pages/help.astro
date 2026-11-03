@@ -1,9 +1,12 @@
 ---
 import Layout from "../components/Layout.astro";
+import AuthFrame from "../components/AuthFrame.astro";
+import BackLink from "../components/BackLink.astro";
 ---
 
 <Layout title="Help" desc="Forgot your password?">
-    <div class="flex flex-col justify-center items-center min-h-[85vh] px-5">
-        <h1 class="text-center text-balance text-3xl">Text Mekot Sarder or Tahmid Islam on Slack for help.</h1>
-    </div>
+    <AuthFrame>
+        <nav class="mb-4" aria-label="Back"><BackLink href="/" label="Back to log in" /></nav>
+        <h1 class="headline text-[2rem]! lg:text-[2.5rem]!">Text Mekot Sarder or Tahmid Islam on Slack for help.</h1>
+    </AuthFrame>
 </Layout>

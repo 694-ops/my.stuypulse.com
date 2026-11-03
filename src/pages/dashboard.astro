@@ -1,11 +1,17 @@
 ---
 import Layout from "../components/Layout.astro"
-import { supabase } from "../lib/supabase"
+import { serviceSupabase, supabase } from "../lib/supabase"
 import MeetingsList from "../components/MeetingsList.astro"
-import Calendar from "../components/Calendar.astro"
-import CompletionStatus from "../components/CompletionStatus.astro"
-import UserData from "../components/UserData.astro"
+import MemberDashboard from "../components/MemberDashboard.astro"
+import MemberSearch from "../components/MemberSearch.astro"
+import BackLink from "../components/BackLink.astro"
+import Battery from "../components/Battery.astro"
 import StudentsList from "../components/StudentsList.astro"
+import TopBar from "../components/TopBar.astro"
+import { formatMeetingDate, formatPercent, todayAtShop } from "../lib/format"
+import { meetingCells, teamCells } from "../lib/charge"
+import { memberDays, type DayStats } from "../lib/days"
+import { isAdmin } from "../lib/access"
 
 // checks if the user is logged in through the cookies
 // if they aren"t logged in then we redirect them to login
@@ -59,17 +65,34 @@ export interface Meeting {
 let allMeetings: string[] = []
 let userData
 let meetings: Meeting[] = []
+let days: Record<string, DayStats> = {}
+
+// a battery with only a few people in it looks like a mistake, so small meetings skip it
+const MIN_MEETING_BATTERY = 8
+
+// only used to show the admin a way back to the meetings list
+const viewerIsAdmin = isAdmin(osis)
+
+// who actually logged in, before the search params can change osis
+const signedInOsis = osis
 
 // if the user is the admin use search params for osis
 osis = Astro.url.searchParams.get("osis") || osis
 
 let meeting = Astro.url.searchParams.get("meeting")
 
+// set when an admin opens a member from a meeting page; only a real date is kept
+const from = Astro.url.searchParams.get("from")
+const fromMeeting = from && /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : null
+
 let meetingInfo: Meeting | null = null
 let names: Record<string, string> = {}
+// first and last names kept apart, so the meeting page can sort by either
+let nameParts: Record<string, { first: string, last: string }> = {}
+let roster: { id: string, name: string }[] = []
 
 if (osis) {
-    if (osis !== "admin") {
+    if (!isAdmin(osis)) {
         // gets the user row from the database
         const { data, error } = await supabase
             .from("attendance")
@@ -78,20 +101,49 @@ if (osis) {
             .order("id_number", { ascending: true })
 
         if (error) console.error("error fetching user data")
-        else { 
+        else {
             userData = data[0]
             allMeetings = data[1].checked_out
         }
+
+        // the member's own times at each meeting, for the calendar's day details.
+        // members can't read the meetings table themselves, so the server reads it and
+        // memberDays keeps only this member's times. only for your own page, or the admin's view
+        if (osis === signedInOsis || viewerIsAdmin) {
+            const { data: meetingRows, error: meetingsError } = await serviceSupabase
+                .from("meetings")
+                .select("date, attendees")
+
+            if (meetingsError) console.error("error fetching meeting times")
+            else days = memberDays(meetingRows, osis)
+        }
     } else {
-        const { data, error } = await supabase
+        // the database only lets the original admin account read meetings, so any other
+        // admin's view is read by the server. this checks who logged in, not the url's osis
+        const adminClient = viewerIsAdmin ? serviceSupabase : supabase
+
+        const { data, error } = await adminClient
             .from("meetings")
             .select("*")
         
         if (error) console.error("error fetching meetings data")
         else meetings = data
 
+        // everyone on the roster, for the search's suggestions. only an admin who logged in gets it
+        if (viewerIsAdmin && !meeting) {
+            const { data, error } = await adminClient
+                .from("attendance")
+                .select("id_number, first_name, last_name")
+                .neq("id_number", "all")
+
+            if (error) console.error("error fetching the roster")
+            else roster = data
+                .map(({ id_number, first_name, last_name }) => ({ id: id_number, name: [first_name, last_name].filter(Boolean).join(" ") }))
+                .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id))
+        }
+
         if (meeting) {
-            const { data, error } = await supabase
+            const { data, error } = await adminClient
                 .from("meetings")
                 .select("*")
                 .eq("date", meeting)
@@ -100,7 +152,7 @@ if (osis) {
             else {
                 meetingInfo = data[0] as Meeting
 
-                const { data: data1, error } = await supabase
+                const { data: data1, error } = await adminClient
                 .from("attendance")
                 .select("id_number, first_name, last_name")
                 .in("id_number", meetingInfo.attendees.map(({id}) => id))
@@ -108,7 +160,10 @@ if (osis) {
                 if (error) console.error("error fetching user names")
                 else {
                     data1.forEach(({ id_number, first_name, last_name}) => {
-                        if (first_name && last_name) names[id_number] = first_name + " " + last_name
+                        if (first_name && last_name) {
+                            names[id_number] = first_name + " " + last_name
+                            nameParts[id_number] = { first: first_name, last: last_name }
+                        }
                     })
                 }
             }
@@ -118,79 +173,48 @@ if (osis) {
 ---
 
 <Layout title="Dashboard | MyPulse" desc="Track attendance and see upcoming events for StuyPulse">
-    <div class="flex flex-col items-center justify-center min-h-[80vh]">
-        {
-            // admin dashboard or meeting page
-            osis === "admin" ? <>
-                {
-                    // meeting page
-                    meeting && meetingInfo ? <>
-                        <h1 class="text-center text-xl">{meeting}</h1>
-                        <StudentsList meetingInfo={meetingInfo} names={names} />
-                    </> :
+    {
+        // admin dashboard or meeting page
+        isAdmin(osis) ? <>
+            <TopBar />
+            {
+                // meeting page
+                meeting && meetingInfo ?
+                    <main class="page-width pb-16">
+                        <nav class="mt-4" aria-label="Back"><BackLink href="/dashboard" label="All meetings" /></nav>
+                        <h1 class="headline mt-4">{formatMeetingDate(meeting)}</h1>
+                        <dl class="flex flex-wrap gap-x-10 gap-y-3 mt-6 mb-8 lg:mb-10">
+                            <div class="flex flex-col-reverse"><dt class="text-[15px] text-soft">checked in</dt><dd class="figure text-[32px]">{meetingInfo.num_checkins}</dd></div>
+                            <div class="flex flex-col-reverse"><dt class="text-[15px] text-soft">checked out</dt><dd class="figure text-[32px]">{meetingInfo.num_checkouts}</dd></div>
+                            <div class="flex flex-col-reverse"><dt class="text-[15px] text-soft">checkout rate</dt><dd class="figure text-[32px]">{formatPercent(meetingInfo.checkout_rate_percent)}</dd></div>
+                        </dl>
+                        {meetingInfo.attendees.length >= MIN_MEETING_BATTERY && <>
+                            <Battery cells={meetingCells(meetingInfo.attendees, names)} />
+                            <div class="mb-10"></div>
+                        </>}
+                        <StudentsList meetingInfo={meetingInfo} names={names} nameParts={nameParts} />
+                    </main> :
 
-                    // if no meeting then just display the admin dashboard with student search and meetings list
-                    <>
-                        <h1 class="text-center text-xl mb-2">Student Search</h1>
-                        <form id="form" class="flex flex-col gap-2 w-[200px] text-sm">
-                            <input
-                                class="text-center border-2 p-2 rounded-xl"
-                                placeholder="Name:"
-                                name="name"
-                            />
-                            <button class="text-center border-2 p-2 rounded-xl" type="submit">
-                                Search
-                            </button>
-
-                            <h1 id="error" class="text-sm text-[#eb3446] text-center"></h1>
-                        </form>
-                        <MeetingsList meetings={meetings.sort(((a, b) => { return b.date.localeCompare(a.date) }))}/>
-                        <form>
-                            <button formaction="/api/auth/logout" class="text-center border-2 rounded-xl w-[200px] p-2 mt-5">
-                                Log out
-                            </button>
-                        </form>
-                    </>
-                }
-            </>
-            : 
-
-            // user dashboard
-            <>
-                <h1 class="mb-2 text-4xl text-center">
-                    {userData.first_name ? `${userData.first_name} ${userData.last_name}` : osis}
-                    {userData.graduation_year && <span class="ml-2 whitespace-nowrap">'{userData.graduation_year}</span>}
-                </h1>
-
-                <div class="flex flex-col w-full items-center mb-5 space-y-5">
-                    <div class="flex flex-wrap gap-5 justify-center mx-3">
-                        <div class="flex flex-wrap w-[85vw] justify-center gap-4">
-                            <div class="flex gap-2 items-center">
-                                <div class="w-4 h-4 bg-[#77dd77]"></div>
-                                <h1>Present</h1>
-                            </div>
-                            <div class="flex gap-2 items-center">
-                                <div class="w-4 h-4 bg-[#e36873]"></div>
-                                <h1>Absent</h1>
-                            </div>
-                            <div class="flex gap-2 items-center">
-                                <div class="w-4 h-4 bg-[#ffbb73]"></div>
-                                <h1>Didn't Checkout</h1>
-                            </div>
+                // if no meeting then just display the admin dashboard with student search and meetings list
+                <main class="page-width pb-16">
+                    <div class="grid lg:grid-cols-[minmax(0,1fr)_340px] items-end gap-x-16 gap-y-8 mt-12 lg:mt-20 mb-8 lg:mb-10">
+                        <div>
+                            <p class="text-soft mb-3">Team 694</p>
+                            <h1 class="headline">Meetings</h1>
                         </div>
-                        <Calendar checkedOut={userData.checked_out} onlyCheckedIn={userData.only_checked_in} allMeetings={allMeetings} />
-                        <UserData userData={userData} />
+                        <MemberSearch members={roster} />
                     </div>
-                    <CompletionStatus safety_test={userData.safety_test} dues={userData.dues} />
-                    <form action="/api/auth/logout" class="mx-auto w-fit">
-                        <button class="text-center border-2 rounded-xl w-[200px] p-2" type="submit">
-                            Log out
-                        </button>
-                    </form>
-                </div>
-            </>
-        }
-    </div>
+                    <Battery cells={teamCells(meetings, todayAtShop())} emptyText="No meetings yet." />
+                    <div class="mb-10"></div>
+                    <MeetingsList meetings={meetings.sort(((a, b) => { return b.date.localeCompare(a.date) }))}/>
+                </main>
+            }
+        </>
+        : 
+
+        // user dashboard
+        <MemberDashboard userData={userData} allMeetings={allMeetings} osis={osis} viewerIsAdmin={viewerIsAdmin} days={days} fromMeeting={fromMeeting} />
+    }
 
     <script>
         const searchForm = document.getElementById("form")

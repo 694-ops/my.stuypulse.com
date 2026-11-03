@@ -1,36 +1,95 @@
 ---
 import type { Meeting } from "../pages/dashboard.astro"
+import { formatMeetingDate, formatPercent } from "../lib/format"
 
 interface Props {
     meetings: Meeting[]
 }
 
 const { meetings } = Astro.props
+
+// each bar is that meeting's turnout against the busiest one
+const busiest = Math.max(1, ...meetings.map(({ num_checkins }) => Number(num_checkins) || 0))
 ---
 
-<h1 class="text-xl mt-5">Meetings</h1>
-<div class="w-[350px] h-[500px] overflow-auto rounded-xl border-2 my-2">
-    <div class="flex my-2">
-        <h1 class="text-sm w-[120px] text-center">Date</h1>
-        <h1 class="text-sm w-[60px] text-center">In</h1>
-        <h1 class="text-sm w-[60px] text-center">Out</h1>
-        <h1 class="text-sm w-[85px] text-center">Out %</h1>
-    </div>
-    <hr class="w-full"/>
-
-    {   
-        meetings.map(({ date, num_checkins, num_checkouts, checkout_rate_percent }) => {
-            return (
-                <a href={`${Astro.url.origin}/dashboard?meeting=${date}`}>
-                    <div class="flex my-2 text-[#424242] hover:underline">
-                        <h1 class="text-sm w-[120px] text-center">{date}</h1>
-                        <h1 class="text-sm w-[60px] text-center">{num_checkins}</h1>
-                        <h1 class="text-sm w-[60px] text-center">{num_checkouts}</h1>
-                        <h1 class="text-sm w-[85px] text-center">{checkout_rate_percent}</h1>
-                    </div>
-                </a>
-                <hr class="w-full"/>
-            )
-        })
+<section>
+    <h2 class="section-title mb-3">All meetings</h2>
+    {
+        meetings.length ? (
+            <>
+                <div class="meeting-row pb-2 text-[13px] text-soft" aria-hidden="true">
+                    <span>Date</span>
+                    <span class="text-right">In</span>
+                    <span class="out-column text-right">Out</span>
+                    <span class="text-right"><span class="md:hidden">Rate</span><span class="hidden md:inline">Checkout rate</span></span>
+                </div>
+                <ul>
+                    {
+                        meetings.map(({ date, num_checkins, num_checkouts, checkout_rate_percent }) => (
+                            <li>
+                                <a class="meeting-row data-row items-center tabular-nums" href={`${Astro.url.origin}/dashboard?meeting=${date}`}>
+                                    <span class="font-medium">{formatMeetingDate(date)}</span>
+                                    <span class="flex items-center gap-3">
+                                        <span class="turnout-track" aria-hidden="true"><span style={`width: ${((Number(num_checkins) || 0) / busiest) * 100}%`}></span></span>
+                                        <span class="w-8 text-right"><span class="sr-only">checked in </span>{num_checkins}</span>
+                                    </span>
+                                    <span class="out-column text-right"><span class="sr-only">checked out </span>{num_checkouts}</span>
+                                    <span class="text-right text-soft"><span class="sr-only">checkout rate </span>{formatPercent(checkout_rate_percent)}</span>
+                                </a>
+                            </li>
+                        ))
+                    }
+                </ul>
+            </>
+        ) : (
+            <p class="text-soft">No meetings yet. They'll appear here after the kiosk's next upload.</p>
+        )
     }
-</div>
+</section>
+
+<style>
+    /* phones drop the checkout count, since the rate already says it, so the date stays on one line */
+    .meeting-row {
+        display: grid;
+        grid-template-columns: 6.75rem minmax(4.5rem, 1fr) 4.25rem;
+        column-gap: 1rem;
+        padding-inline: 0.5rem;
+        white-space: nowrap;
+    }
+
+    .out-column {
+        display: none;
+    }
+
+    @media (min-width: 768px) {
+        .meeting-row {
+            grid-template-columns: 11rem minmax(0, 1fr) 6rem 8rem;
+            column-gap: 2rem;
+            padding-inline: 0.75rem;
+        }
+
+        .out-column {
+            display: block;
+        }
+    }
+
+    /* the bar sits beside the count, on the same line */
+    .turnout-track {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: color-mix(in srgb, var(--color-line) 60%, transparent);
+        overflow: hidden;
+    }
+
+    .turnout-track span {
+        display: block;
+        height: 100%;
+        border-radius: 3px;
+        background: var(--color-charge);
+    }
+
+    a:hover .turnout-track span {
+        background: color-mix(in srgb, var(--color-charge) 85%, black);
+    }
+</style>

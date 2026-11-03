@@ -1,0 +1,111 @@
+---
+interface Props {
+    // everyone on the roster, so names can be suggested while typing
+    members: { id: string, name: string }[]
+}
+
+const { members } = Astro.props
+---
+
+<form id="form" class="flex flex-col gap-2" autocomplete="off">
+    <label for="name" class="text-[15px] font-medium">Find a member by name or OSIS</label>
+    <div class="relative flex gap-2">
+        <div class="relative flex-1 min-w-0">
+            <input class="field" name="name" id="name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="member-options"/>
+            <ul id="member-options" role="listbox" aria-label="Matching members" class="member-options" hidden></ul>
+        </div>
+        <button class="button w-auto!" type="submit">Search</button>
+    </div>
+    <p id="error" role="alert" class="text-[15px] text-charge empty:hidden"></p>
+</form>
+
+<script define:vars={{ members }}>
+    const input = document.getElementById("name")
+    const list = document.getElementById("member-options")
+    const MAX_OPTIONS = 8
+
+    let matches = []
+    let active = -1
+
+    // a name matches when any word in it starts with what's typed, an osis when it starts with the digits
+    function findMatches(query) {
+        const typed = query.trim().toLowerCase()
+        if (!typed) return []
+
+        return members.filter(({ id, name }) => {
+            const lower = name.toLowerCase()
+            return id.startsWith(typed) || lower.startsWith(typed) || lower.split(" ").some((word) => word.startsWith(typed))
+        }).slice(0, MAX_OPTIONS)
+    }
+
+    function open(member) {
+        window.location.href = `/dashboard?osis=${encodeURIComponent(member.id)}`
+    }
+
+    function render() {
+        list.innerHTML = ""
+
+        matches.forEach((member, index) => {
+            const option = document.createElement("li")
+            option.id = `member-option-${index}`
+            option.role = "option"
+            option.className = "member-option"
+            option.setAttribute("aria-selected", String(index == active))
+
+            const name = document.createElement("span")
+            name.innerText = member.name || member.id
+            option.appendChild(name)
+
+            if (member.name) {
+                const id = document.createElement("span")
+                id.className = "text-soft tabular-nums"
+                id.innerText = member.id
+                option.appendChild(id)
+            }
+
+            // mousedown so the choice lands before the input loses focus
+            option.addEventListener("mousedown", (event) => {
+                event.preventDefault()
+                open(member)
+            })
+            list.appendChild(option)
+        })
+
+        const showing = matches.length > 0
+        list.hidden = !showing
+        input.setAttribute("aria-expanded", String(showing))
+        if (active >= 0) input.setAttribute("aria-activedescendant", `member-option-${active}`)
+        else input.removeAttribute("aria-activedescendant")
+    }
+
+    input.addEventListener("input", () => {
+        matches = findMatches(input.value)
+        active = matches.length ? 0 : -1
+        document.getElementById("error").textContent = ""
+        render()
+    })
+
+    input.addEventListener("keydown", (event) => {
+        if (!matches.length) return
+
+        if (event.key == "ArrowDown" || event.key == "ArrowUp") {
+            event.preventDefault()
+            const step = event.key == "ArrowDown" ? 1 : -1
+            active = (active + step + matches.length) % matches.length
+            render()
+        } else if (event.key == "Enter" && active >= 0) {
+            event.preventDefault()
+            open(matches[active])
+        } else if (event.key == "Escape") {
+            matches = []
+            active = -1
+            render()
+        }
+    })
+
+    input.addEventListener("blur", () => {
+        matches = []
+        active = -1
+        render()
+    })
+</script>

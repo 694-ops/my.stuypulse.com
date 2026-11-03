@@ -8,8 +8,8 @@ For documentation, visit [this link](https://docs.google.com/document/d/1YYvSsou
 The kiosk's attendance CSV can include `graduation_year`. The scanner endpoint reads
 CSV column headers, so exports with or without that optional column are supported.
 Years must be between 1900 and 2200. A blank or omitted year preserves the member's
-existing year. The dashboard shows the year beside the member's name (for example,
-`Jane Doe '2028`); members without a year display only their name.
+existing year. The dashboard shows the year with the member's name (for example,
+`Jane Doe, Class of 2028`); members without a year display only their name.
 
 The live `mypulse` database migration `add_attendance_graduation_year` adds:
 
@@ -20,3 +20,7 @@ alter table public.attendance
 ```
 
 Run the scanner import regression tests with `node --test tests/kiosk-import.test.mjs`.
+
+## Previewing without the real database
+
+`scripts/mock-supabase.mjs` serves made-up members and meetings, so the UI can be checked without touching live data. See the top of that file for the commands and logins.

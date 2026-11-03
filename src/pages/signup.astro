@@ -1,6 +1,8 @@
 ---
 import Layout from "../components/Layout.astro"
 import Form from "../components/Form.astro"
+import AuthFrame from "../components/AuthFrame.astro"
+import BackLink from "../components/BackLink.astro"
 
 const { cookies, redirect } = Astro
 
@@ -12,10 +14,11 @@ if (accessToken && refreshToken) return redirect("/dashboard")
 ---
 
 <Layout title="Signup | MyPulse" desc="Signup to MyPulse">
-    <div class="flex flex-col justify-center items-center min-h-[80vh] space-y-5">
-        <h1 class="text-center text-4xl">Sign Up</h1>
+    <AuthFrame>
+        <nav class="mb-4" aria-label="Back"><BackLink href="/" label="Back to log in" /></nav>
+        <h1 class="headline mb-6">Sign up</h1>
         <Form type="signup" />
-    </div>
+    </AuthFrame>
 
     <script>
         // gets the form element

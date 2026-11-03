@@ -1,4 +1,6 @@
 ---
+import { formatPercent } from "../lib/format"
+
 interface Props {
     userData: {
         id_number: string
@@ -12,44 +14,30 @@ interface Props {
 }
 
 const { userData } = Astro.props
+
+const numbers = userData && [
+    { label: "hours in the shop", value: userData.total_hours },
+    { label: "hours at a typical meeting", value: userData.average_hours },
+    { label: "attendance rate", value: formatPercent(userData.attendance_rate_percent) },
+    { label: "check-ins", value: userData.num_checkins },
+    { label: "checkouts", value: userData.num_checkouts },
+    { label: "checkout rate", value: formatPercent(userData.checkout_rate_percent) },
+]
 ---
 
-<div>
-    {
-        userData ? (
-            <table class="w-[275px] h-[310px] text-center border-separate border-spacing-0 rounded-xl border-2">
-                <tr>
-                    <td class="border-b-2 border-r-2">Checkins:</td>
-                    <td class="border-b-2 px-2">{userData.num_checkins}</td>
-                </tr>
-
-                <tr>
-                    <td class="border-b-2 border-r-2">Attendance Rate:</td>
-                    <td class="border-b-2 px-2">{userData.attendance_rate_percent}</td>
-                </tr>
-
-                <tr>
-                    <td class="border-b-2 border-r-2">Checkouts:</td>
-                    <td class="border-b-2 px-2">{userData.num_checkouts}</td>
-                </tr>
-
-                <tr>
-                    <td class="border-b-2 border-r-2">Checkout Rate:</td>
-                    <td class="border-b-2 px-2">{userData.checkout_rate_percent}</td>
-                </tr>
-
-                <tr>
-                    <td class="border-b-2 border-r-2">Total Hours:</td>
-                    <td class="border-b-2 px-2">{userData.total_hours}</td>
-                </tr>
-
-                <tr>
-                    <td class="border-r-2">Average Hours:</td>
-                    <td>{userData.average_hours}</td>
-                </tr>
-            </table>
-        ) : (
-            <h1>Error fetching user data</h1>
-        )
-    }
-</div>
+{
+    numbers ? (
+        <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
+            {
+                numbers.map(({ label, value }) => (
+                    <div class="flex flex-col-reverse justify-end">
+                        <dt class="text-[15px] text-soft">{label}</dt>
+                        <dd class="figure text-[28px]">{value}</dd>
+                    </div>
+                ))
+            }
+        </dl>
+    ) : (
+        <p>Your numbers couldn't load. Refresh the page to try again.</p>
+    )
+}

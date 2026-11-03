@@ -2,6 +2,7 @@ export const prerender = false
 
 import type { APIRoute } from "astro"
 import { supabase } from "../../../lib/supabase"
+import { isAdmin } from "../../../lib/access"
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const formData = await request.formData()
@@ -10,7 +11,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
     // handling errors with osis and password input
     if (!osis || !password) return new Response("OSIS and password are required", { status: 400 })
-    if (osis !== "admin" && (osis.length != 9 || isNaN(Number(osis)))) return new Response("Invalid OSIS", { status: 400 })
+    if (!isAdmin(osis) && (osis.length != 9 || isNaN(Number(osis)))) return new Response("Invalid OSIS", { status: 400 })
 
     // log in with supabase and handle any errors
     const { data, error } = await supabase.auth.signInWithPassword({ email: osis + "@email.com", password })

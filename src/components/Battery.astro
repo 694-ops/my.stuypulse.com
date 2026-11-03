@@ -1,0 +1,65 @@
+---
+import type { Cell } from "../lib/charge"
+import { cellSummary } from "../lib/charge"
+
+interface Props {
+    cells: Cell[]
+    decorative?: boolean
+    emptyText?: string
+}
+
+const { cells, decorative = false, emptyText } = Astro.props
+const step = cells.length ? 600 / cells.length : 0
+
+// up to this many cells always sit in one row, and twice as many do on wider screens; more wraps
+const ONE_ROW = 60
+---
+
+<div class="battery" data-battery aria-hidden={decorative ? "true" : undefined}>
+    {!decorative && <p class="sr-only">{cells.length ? `Battery with one cell per meeting: ${cellSummary(cells)}` : emptyText}</p>}
+    <div class="battery-top" aria-hidden="true">
+        <span class="battery-terminal"></span>
+        <svg viewBox="0 0 100 14" preserveAspectRatio="none">
+            <polyline points="0,7 6,1 19,13 31,1 44,13 56,1 69,13 81,1 94,13 100,7" vector-effect="non-scaling-stroke"></polyline>
+        </svg>
+        <span class="battery-terminal"></span>
+    </div>
+    <div class="battery-case" aria-hidden="true">
+        {
+            cells.length ? (
+                <div class:list={["battery-cells", cells.length <= ONE_ROW && "battery-cells-row", cells.length <= ONE_ROW * 2 && "battery-cells-wide"]} style={`--count: ${cells.length}`}>
+                    {
+                        cells.map((cell, index) => {
+                            const inner = <span class={`cell cell-${cell.kind}`} style={`--level: ${cell.level.toFixed(3)}; --delay: ${(index * step).toFixed(0)}ms`} data-label={cell.label || undefined} title={cell.label || undefined}><i></i></span>
+
+                            return cell.href ? <a href={cell.href} tabindex="-1" aria-hidden="true">{inner}</a> : inner
+                        })
+                    }
+                </div>
+            ) : (
+                <p class="battery-empty">{emptyText}</p>
+            )
+        }
+    </div>
+    {!decorative && cells.length > 0 && <p class="battery-detail" data-battery-detail hidden></p>}
+</div>
+
+<script>
+    // names a cell under the battery when it's hovered or tapped
+    document.querySelectorAll<HTMLElement>("[data-battery]").forEach((battery) => {
+        const detail = battery.querySelector<HTMLElement>("[data-battery-detail]")
+        if (!detail) return
+
+        battery.addEventListener("pointerover", (event) => {
+            const label = (event.target as Element).closest<HTMLElement>("[data-label]")?.dataset.label
+            if (!label) return
+
+            detail.textContent = label
+            detail.hidden = false
+        })
+
+        battery.addEventListener("pointerleave", () => {
+            detail.hidden = true
+        })
+    })
+</script>

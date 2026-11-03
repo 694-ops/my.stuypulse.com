@@ -10,14 +10,15 @@ const refreshToken = cookies.get("sb-refresh-token")
 if (accessToken && refreshToken) return redirect("/dashboard")
 
 import Form from "../components/Form.astro"
+import AuthFrame from "../components/AuthFrame.astro"
 ---
 
 <Layout title="MyPulse" desc="Login to MyPulse">
-    <div class="flex flex-col justify-center items-center min-h-[85vh] space-y-5">
-        <h1 class="text-center text-4xl">MyPulse</h1>
+    <AuthFrame>
+        <h1 class="headline mb-6">Log in</h1>
         <Form type="login" />
-        <a href="/help" class="text-sm text-center hover:underline">Forgot your password?</a>
-    </div>
+        <a href="/help" class="inline-flex items-center min-h-11 mt-1 link text-[15px] text-soft">Forgot your password?</a>
+    </AuthFrame>
 
     <script>
         // gets the form element
