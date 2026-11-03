@@ -244,6 +244,17 @@
         overflow: hidden;
     }
 
+    .battery-cells .cell-button {
+        width: 100%;
+        cursor: pointer;
+    }
+
+    /* the meeting whose details are showing */
+    .cell-selected {
+        outline: 2px solid var(--color-ink);
+        outline-offset: 3px;
+    }
+
     /* a wider invisible target, since the bars themselves are thin */
     .battery-cells > *,
     .battery-cells a {

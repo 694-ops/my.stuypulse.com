@@ -56,6 +56,19 @@ const { checkedOut, onlyCheckedIn, allMeetings, days } = Astro.props
     setButtonClicks()
     showDay()
 
+    // the battery asks for a meeting by date; jump to its month and show it
+    document.addEventListener("select-meeting", (event) => {
+        selected = event.detail
+        const [y, m] = selected.split("-").map(Number)
+        date = new Date(y, m - 1)
+        year = date.getFullYear()
+        month = date.getMonth()
+
+        updateTitle()
+        generateDates()
+        showDay()
+    })
+
     // sets event listeners for changing months
     function setButtonClicks() {
         const left = document.getElementById("left")
@@ -124,6 +137,10 @@ const { checkedOut, onlyCheckedIn, allMeetings, days } = Astro.props
         document.getElementById("day-hours").innerText = stats?.hours || "-"
 
         detail.classList.remove("hidden")
+
+        // tells the battery which meeting is showing
+        document.documentElement.dataset.selectedMeeting = selected
+        document.dispatchEvent(new CustomEvent("meeting-selected", { detail: selected }))
     }
 
     // styles a meeting day and names its status for hover and screen readers

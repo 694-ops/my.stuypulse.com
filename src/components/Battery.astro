@@ -6,9 +6,11 @@ interface Props {
     cells: Cell[]
     decorative?: boolean
     emptyText?: string
+    // cells pick that meeting on the calendar, so clicking one shows its details
+    selectable?: boolean
 }
 
-const { cells, decorative = false, emptyText } = Astro.props
+const { cells, decorative = false, emptyText, selectable = false } = Astro.props
 const step = cells.length ? 600 / cells.length : 0
 
 // up to this many cells always sit in one row, and twice as many do on wider screens; more wraps
@@ -54,13 +56,22 @@ const ONE_ROW = 60
                             </span>
                         )
 
-                        return cell.href ? (
-                            <a href={cell.href} tabindex="-1" aria-hidden="true">
-                                {inner}
-                            </a>
-                        ) : (
-                            inner
-                        )
+                        if (cell.href)
+                            return (
+                                <a href={cell.href} tabindex="-1" aria-hidden="true">
+                                    {inner}
+                                </a>
+                            )
+
+                        // the calendar is the keyboard way to pick a meeting, so these stay out of the tab order
+                        if (selectable)
+                            return (
+                                <button type="button" class="cell-button" tabindex="-1" data-select={cell.key}>
+                                    {inner}
+                                </button>
+                            )
+
+                        return inner
                     })}
                 </div>
             ) : (
@@ -89,4 +100,27 @@ const ONE_ROW = 60
             detail.hidden = true
         })
     })
+
+    // a selectable cell picks its meeting on the calendar, and the calendar's choice is ringed here
+    const cellButtons = document.querySelectorAll<HTMLElement>("[data-select]")
+
+    function ringSelected(selected: string | undefined) {
+        cellButtons.forEach((button) =>
+            button.firstElementChild?.classList.toggle("cell-selected", button.dataset.select === selected),
+        )
+    }
+
+    cellButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            document.dispatchEvent(new CustomEvent("select-meeting", { detail: button.dataset.select }))
+
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            document
+                .getElementById("day-detail")
+                ?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" })
+        })
+    })
+
+    document.addEventListener("meeting-selected", (event) => ringSelected((event as CustomEvent<string>).detail))
+    ringSelected(document.documentElement.dataset.selectedMeeting)
 </script>
