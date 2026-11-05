@@ -187,35 +187,66 @@
     }
 
     /* the battery, drawn after the one in the 694 logo */
+    /* two round terminals on posts, joined by a heartbeat */
     .battery-top {
         display: flex;
-        align-items: flex-end;
-        height: 22px;
-        padding-inline: 10%;
-    }
-
-    .battery-top svg {
-        flex: 1;
-        height: 14px;
-        margin-bottom: 4px;
-        fill: none;
-        stroke: var(--color-ink);
-        stroke-width: 1.25;
-        stroke-linejoin: round;
+        align-items: flex-start;
+        height: 30px;
+        padding-inline: 9%;
     }
 
     .battery-terminal {
-        width: 14px;
-        height: 18px;
-        border-radius: 3px 3px 0 0;
+        position: relative;
+        flex: none;
+        width: 16px;
+        height: 30px;
+    }
+
+    .battery-terminal::before,
+    .battery-terminal::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        translate: -50% 0;
         background: var(--color-ink);
     }
 
+    .battery-terminal::before {
+        top: 7px;
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+    }
+
+    .battery-terminal::after {
+        top: 20px;
+        width: 7px;
+        height: 10px;
+    }
+
+    .battery-wire {
+        flex: 1;
+        height: 2px;
+        margin-top: 14px;
+        background: var(--color-charge);
+    }
+
+    .battery-pulse {
+        flex: none;
+        width: 72px;
+        height: 30px;
+        fill: none;
+        stroke: var(--color-charge);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
     .battery-case {
-        padding: 0.75rem 1rem;
+        padding: 0.875rem 1.125rem;
         background: var(--color-panel);
-        border: 1.5px solid var(--color-ink);
-        border-radius: 18px;
+        border: 2px solid var(--color-ink);
+        border-radius: 22px;
     }
 
     .battery-cells {

@@ -92,7 +92,7 @@ export function meetingCells(attendees: Attendee[], names: Record<string, string
 
 // the log in screen's picture, which isn't anyone's real attendance
 export function sampleCells(): Cell[] {
-    return "ppppppppapppppcpppppppaapppppppppppcpppppppapppppcppppp".split("").map((kind, i) => ({
+    return "pppppcppappppppcpppap".split("").map((kind, i) => ({
         key: String(i),
         kind: kind === "a" ? "absent" : kind === "c" ? "partial" : "present",
         level: kind === "p" ? 1 : kind === "c" ? 0.5 : 0,
